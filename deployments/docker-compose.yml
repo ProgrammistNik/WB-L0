@@ -1,0 +1,58 @@
+services:
+  database:
+    image: "postgres:latest"
+    restart: always
+    ports:
+      - 5432:5432
+    env_file:
+      - .env
+    volumes:
+      - ${PWD}/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - 8888:80
+    env_file:
+      - .env
+    depends_on:
+      - database
+    volumes:
+      - ${PWD}/db/pgadmin-data/:/var/lib/pgadmin/
+
+  zookeeper:
+    image: zookeeper:latest
+    env_file:
+      - .env
+    ports:
+      - 22181:2181
+
+  kafka:
+    image: apache/kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+    env_file:
+      - .env
+    
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8082:8080
+    environment:
+      DYNAMIC_CONFIG_ENABLED: 'true'
+
+
+  kafka-create-topics:
+    image: apache/kafka:latest
+    depends_on:
+      - kafka
+    hostname: kafka-create-topics
+    command: ["bash", "./create-topics.sh"]
+    working_dir: /scripts
+    volumes:
+      - ./scripts:/scripts
